@@ -57,7 +57,9 @@ void* worker3(void *data) {
 int main() {
     cout << "\nStart pipeline test" << endl;
     Pipeline pipeline{fetch_data, {worker1, worker2, worker3}};
-    //while (true) {}
-    this_thread::sleep_for(chrono::milliseconds(24010));
+    for (int i{0}; i < 10; ++i) {
+        string data = *static_cast<string*>(pipeline.get_future().get());
+        cout << "Data " << i << " is: " << data << endl;
+    }
     cout << "\nEnd pipeline test" << endl;
 }

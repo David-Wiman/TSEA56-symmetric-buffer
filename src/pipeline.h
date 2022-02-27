@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <future>
 #include <condition_variable>
 
 struct data_package {
@@ -60,6 +61,7 @@ class Pipeline {
 public:
     Pipeline(void* (*f0)(), std::initializer_list<void* (*)(void*)> f_list);
     ~Pipeline();
+    std::future<void*> get_future();
 
 private:
     std::array<pipeline_link, 32> pipeline_links;

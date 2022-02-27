@@ -1,4 +1,6 @@
 #include <mutex>
+#include <future>
+#include <thread>
 
 #include "pipeline.h"
 
@@ -18,4 +20,20 @@ Pipeline::Pipeline(void* (*f)(), initializer_list<void* (*)(void*)> f_list): pip
 Pipeline::~Pipeline() {
     for (auto stage : stages)
         delete stage;
+}
+
+future<void*> Pipeline::get_future() {
+    pipeline_link &link = pipeline_links[stages.size()-1];
+    void *data;
+    {
+        unique_lock<mutex> lk(link.mtx);
+        link.cv.wait(lk, [this]{return pipeline_links[stages.size()-1].has_data;});
+        data = link.buffer;
+        link.has_data = false;
+    }
+    link.cv.notify_one();
+
+    promise<void*> p;
+    p.set_value(data);
+    return p.get_future();
 }
