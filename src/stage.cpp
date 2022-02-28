@@ -7,13 +7,11 @@
 #include <cstdarg>
 
 #include "pipeline.h"
+#include "logging.h"
 
 
 using namespace std;
 
-mutex print_mtx;
-
-#define print_with_lock(fmt, args...)({lock_guard<mutex> guard(print_mtx); printf(fmt, ##args);})
 
 FirstStage::FirstStage(void* (*func)(), pipeline_link &link_out)
 : GenericStage(link_out), func{func} {
@@ -31,12 +29,12 @@ Stage::Stage(void* (*func)(void*), pipeline_link &link_in, pipeline_link &link_o
 
 void FirstStage::run() {
     while (true) {
-        print_with_lock("Start worker %d\n", stage_index);
+        log_worker("Start worker %d\n", stage_index);
         const auto start_time = chrono::high_resolution_clock::now();
         void* data = func();
         const auto stop_time = chrono::high_resolution_clock::now();
         double duration = chrono::duration<double, std::milli>(stop_time-start_time).count();
-        print_with_lock("Worker %d ran for %.2f ms\n", stage_index, duration);
+        log_worker("\tWorker %d done (ran for %.2f ms)\n", stage_index, duration);
         {
             unique_lock<mutex> lk(link_out.mtx);
             link_out.cv.wait(lk, [this]{return !link_out.has_data;});
@@ -61,12 +59,12 @@ void Stage::run() {
         const auto stop_wait = chrono::high_resolution_clock::now();
         double wait_dur = chrono::duration<double, std::milli>(stop_wait-start_wait).count();
 
-        print_with_lock("Start worker %d (waited %.2f ms)\n", stage_index, wait_dur);
+        log_worker("Start worker %d (waited %.2f ms)\n", stage_index, wait_dur);
         const auto start_work = chrono::high_resolution_clock::now();
         data = func(data);
         const auto stop_work = chrono::high_resolution_clock::now();
         double work_dur = chrono::duration<double, std::milli>(stop_work-start_work).count();
-        print_with_lock("Worker %d ran for %.2f ms\n", stage_index, work_dur);
+        log_worker("\tWorker %d done (ran for %.2f ms)\n", stage_index, work_dur);
 
         {
             unique_lock<mutex> lk(link_out.mtx);

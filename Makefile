@@ -44,8 +44,8 @@ check: tests
 check-leaktest: tests
 	@ valgrind --leak-check=full --suppressions=./suppressions.txt ./test
 
-play-leaktest: main
-	@ valgrind --leak-check=full --suppressions=./suppressions.txt ./play
+run-leaktest: main
+	@ valgrind --leak-check=full ./$(OUTNAME)
 
 # 'make clean' removes object files and memory dumps.
 clean:
