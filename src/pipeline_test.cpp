@@ -6,7 +6,7 @@
 
 #include "pipeline.h"
 
-#define STAGE_COMP_TIME 3000
+#define STAGE_COMP_TIME 100
 
 using namespace std;
 
@@ -80,13 +80,14 @@ void* worker3(void *data) {
 int main() {
     cout << "\nStart pipeline test" << endl;
     Pipeline pipeline{fetch_data, {worker1, worker2, worker3}};
-    for (int i{0}; i < 10; ++i) {
+    for (int i{0}; i < 4; ++i) {
         my_data *d = static_cast<my_data*>(pipeline.get_future().get());
         cout << "Data " << i << " returned. Waited: "
              << d->transfer_times[0] << " ms, "
              << d->transfer_times[1] << " ms, "
              << d->transfer_times[2] << " ms"
              << endl;
+        delete d;
     }
     cout << "\nEnd pipeline test" << endl;
 }

@@ -28,7 +28,7 @@ future<void*> Pipeline::get_future() {
     {
         unique_lock<mutex> lk(link.mtx);
         link.cv.wait(lk, [this]{return pipeline_links[stages.size()-1].has_data;});
-        data = link.buffer;
+        data = std::move(link.buffer);
         link.has_data = false;
     }
     link.cv.notify_one();

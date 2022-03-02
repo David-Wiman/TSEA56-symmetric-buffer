@@ -21,13 +21,14 @@ struct pipeline_link {
 
 class GenericStage {
 public:
-    GenericStage(pipeline_link &link_out): link_out{link_out}, stage_index{} {};
-    virtual ~GenericStage() {};
+    GenericStage(pipeline_link &link_out): link_out{link_out}, stage_index{}, th{} {};
+    virtual ~GenericStage();
 
     GenericStage(const GenericStage&) = delete;
     GenericStage operator=(const GenericStage&) = delete;
 
 protected:
+    std::thread *th;
     pipeline_link &link_out;
     unsigned int stage_index;
 };
@@ -56,7 +57,7 @@ private:
 /* A pipeline is initialized as
  * Pipeline p{f0, {f1, ..., fn}};
  * where f0 is a function taking nothing and returning a pointer
- * and f1-fn is functions taking pointers and returning pointers */
+ * and f1-fn are functions taking pointers and returning pointers */
 class Pipeline {
 public:
     Pipeline(void* (*f0)(), std::initializer_list<void* (*)(void*)> f_list);

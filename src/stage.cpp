@@ -12,19 +12,21 @@
 
 using namespace std;
 
+GenericStage::~GenericStage() {
+    delete th;
+}
+
 
 FirstStage::FirstStage(void* (*func)(), pipeline_link &link_out)
 : GenericStage(link_out), func{func} {
     stage_index = 0;
-    thread t(&FirstStage::run, this);
-    t.detach();
+    th = new thread(&FirstStage::run, this);
 }
 
 Stage::Stage(void* (*func)(void*), pipeline_link &link_in, pipeline_link &link_out, unsigned int stage_idx)
 : GenericStage(link_out), link_in{link_in}, func{func} {
     stage_index = stage_idx;
-    thread t(&Stage::run, this);
-    t.detach();
+    th = new thread(&Stage::run, this);
 }
 
 void FirstStage::run() {
@@ -38,7 +40,7 @@ void FirstStage::run() {
         {
             unique_lock<mutex> lk(link_out.mtx);
             link_out.cv.wait(lk, [this]{return !link_out.has_data;});
-            link_out.buffer = data;
+            link_out.buffer = std::move(data);
             link_out.has_data = true;
         }
         link_out.cv.notify_one();
@@ -52,7 +54,7 @@ void Stage::run() {
         {
             unique_lock<mutex> lk(link_in.mtx);
             link_in.cv.wait(lk, [this]{return link_in.has_data;});
-            data = link_in.buffer;
+            data = std::move(link_in.buffer);
             link_in.has_data = false;
         }
         link_in.cv.notify_one();
@@ -69,7 +71,7 @@ void Stage::run() {
         {
             unique_lock<mutex> lk(link_out.mtx);
             link_out.cv.wait(lk, [this]{return !link_out.has_data;});
-            link_out.buffer = data;
+            link_out.buffer = std::move(data);
             link_out.has_data = true;
         }
         link_out.cv.notify_one();
