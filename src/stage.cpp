@@ -12,7 +12,23 @@
 
 using namespace std;
 
+GenericStage::GenericStage(pipeline_link &link_out)
+: link_out{link_out}, stage_index{}, th{}, running{true} {};
+
 GenericStage::~GenericStage() {
+    running.store(false);  // thread will stop when current cycle complete
+    if (link_out.mtx.try_lock()) {
+        // Pretend to clear buffer so that worker wont lock at it next time
+        // (this introduces a memory leak, in the worst case it leaks
+        // number_of_workers*2*data_size) I don't know what to do about it.
+        link_out.has_data = false;
+
+        link_out.mtx.unlock();
+        link_out.cv.notify_all();  // in case worker was waiting
+    } else {
+        // Worker will complete this cycle without our intervention
+    }
+    th->join();  // this could have deadlocked if we didn't clear the buffer
     delete th;
 }
 
@@ -30,7 +46,7 @@ Stage::Stage(void* (*func)(void*), pipeline_link &link_in, pipeline_link &link_o
 }
 
 void FirstStage::run() {
-    while (true) {
+    while (running.load()) {
         log_worker("Start worker %d\n", stage_index);
         const auto start_time = chrono::high_resolution_clock::now();
         void* data = func();
@@ -48,7 +64,7 @@ void FirstStage::run() {
 }
 
 void Stage::run() {
-    while (true) {
+    while (running.load()) {
         void* data;
         const auto start_wait = chrono::high_resolution_clock::now();
         {

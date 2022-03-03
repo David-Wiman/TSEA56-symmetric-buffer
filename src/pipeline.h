@@ -21,7 +21,7 @@ struct pipeline_link {
 
 class GenericStage {
 public:
-    GenericStage(pipeline_link &link_out): link_out{link_out}, stage_index{}, th{} {};
+    GenericStage(pipeline_link &link_out);
     virtual ~GenericStage();
 
     GenericStage(const GenericStage&) = delete;
@@ -31,6 +31,7 @@ protected:
     std::thread *th;
     pipeline_link &link_out;
     unsigned int stage_index;
+    std::atomic<bool> running;
 };
 
 class FirstStage: public GenericStage {

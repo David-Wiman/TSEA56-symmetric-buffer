@@ -1,6 +1,7 @@
 #include <mutex>
 #include <future>
 #include <thread>
+#include <iostream>
 
 #include "pipeline.h"
 
