@@ -6,7 +6,7 @@
 
 #include "pipeline.h"
 
-#define STAGE_COMP_TIME 100
+#define STAGE_COMP_TIME 100  // Time (in ms) for the stage compute times
 
 using namespace std;
 

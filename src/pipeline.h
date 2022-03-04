@@ -7,11 +7,6 @@
 #include <future>
 #include <condition_variable>
 
-struct data_package {
-    void *data;
-    bool had_data;
-};
-
 struct pipeline_link {
     std::mutex mtx;
     std::condition_variable cv;
@@ -28,9 +23,9 @@ public:
     GenericStage operator=(const GenericStage&) = delete;
 
 protected:
-    std::thread *th;
     pipeline_link &link_out;
     unsigned int stage_index;
+    std::thread *th;
     std::atomic<bool> running;
 };
 
