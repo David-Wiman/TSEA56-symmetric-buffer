@@ -36,32 +36,33 @@ protected:
 
 class FirstStage: public GenericStage {
 public:
-    FirstStage(void* (*func)(), pipeline_link &link_out);
+    FirstStage(std::function<void*()> func, pipeline_link &link_out);
     void run();
 
 private:
-    void* (*func)();  // A pointer to a function which takes nothing but returns a pointer to void
+    std::function<void*()> func;
 };
 
 class Stage: public GenericStage {
 public:
-    Stage(void* (*func)(void*), pipeline_link &link_in, pipeline_link &link_out, unsigned int stage_index);
+    Stage(std::function<void*(void*)> func, pipeline_link &link_in, pipeline_link &link_out, unsigned int stage_index);
     ~Stage() = default;
     void run();
 
 private:
     pipeline_link &link_in;
-    void* (*func)(void*);  // A pointer to a function which takes and returns a pointer to void
+    std::function<void*(void*)> func;
 };
 
 
 /* A pipeline is initialized as
  * Pipeline p{f0, {f1, ..., fn}};
- * where f0 is a function taking nothing and returning a pointer
- * and f1-fn are functions taking pointers and returning pointers */
+ * where f0 is a function (or rather a callable object) taking nothing and 
+ * returning a pointer and f1-fn are functions taking pointers and returning
+ * pointers */
 class Pipeline {
 public:
-    Pipeline(void* (*f0)(), std::initializer_list<void* (*)(void*)> f_list);
+    Pipeline(std::function<void*()> f0, std::initializer_list<std::function<void*(void*)>> f_list);
     ~Pipeline();
     std::future<void*> get_future();
 

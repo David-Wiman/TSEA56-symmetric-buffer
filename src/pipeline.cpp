@@ -7,7 +7,7 @@
 
 using namespace std;
 
-Pipeline::Pipeline(void* (*f)(), initializer_list<void* (*)(void*)> f_list): pipeline_links{}, stages{} {
+Pipeline::Pipeline(function<void*()> f, initializer_list<function<void*(void*)>> f_list): pipeline_links{}, stages{} {
     for (pipeline_link &pl : pipeline_links )
         pl.has_data = false;
     stages.push_back(new FirstStage(f, pipeline_links[0]));

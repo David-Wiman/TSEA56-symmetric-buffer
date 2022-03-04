@@ -16,20 +16,27 @@ struct my_data {
     vector<double> transfer_times{};
 };
 
-atomic<int> data_counter{0};
+// The fetcher worker needs an internal state. This is done by implementing a
+// callable class (with the operator() method).
 
-void* fetch_data() {
-    const auto start = chrono::high_resolution_clock::now();
-    while (start + chrono::milliseconds(STAGE_COMP_TIME) > chrono::high_resolution_clock::now());
-    int counter = data_counter.load();
-    data_counter.store(counter + 1);
-    my_data *d = new my_data{};
-    d->index = counter;
-    d->timestamp = chrono::high_resolution_clock::now();
-    return d;
-}
+class Fetcher {
+public:
+    Fetcher(): data_counter{0} {}
+    void* operator()() {
+        const auto start = chrono::high_resolution_clock::now();
+        while (start + chrono::milliseconds(STAGE_COMP_TIME) > chrono::high_resolution_clock::now());
+        my_data *d = new my_data{};
+        d->index = data_counter++;
+        d->timestamp = chrono::high_resolution_clock::now();
+        return d;
+    }
+private:
+    int data_counter;
+};
 
-void* worker1(void *data) {
+// If no state needed just use a function
+
+void* worker(void *data) {
     // Measure data transfer time
     my_data *d = static_cast<my_data*>(data);
     const auto start_time = d->timestamp;
@@ -45,41 +52,10 @@ void* worker1(void *data) {
     return data;
 }
 
-void* worker2(void *data) {
-    // Measure data transfer time
-    my_data *d = static_cast<my_data*>(data);
-    const auto start_time = d->timestamp;
-    const auto stop_time = chrono::high_resolution_clock::now();
-    double duration = chrono::duration<double, std::milli>(stop_time-start_time).count();
-    d->transfer_times.push_back(duration);
-
-    // Do something
-    const auto start = chrono::high_resolution_clock::now();
-    while (start + chrono::milliseconds(STAGE_COMP_TIME) > chrono::high_resolution_clock::now());
-
-    d->timestamp = chrono::high_resolution_clock::now();
-    return data;
-}
-
-void* worker3(void *data) {
-    // Measure data transfer time
-    my_data *d = static_cast<my_data*>(data);
-    const auto start_time = d->timestamp;
-    const auto stop_time = chrono::high_resolution_clock::now();
-    double duration = chrono::duration<double, std::milli>(stop_time-start_time).count();
-    d->transfer_times.push_back(duration);
-
-    // Do something
-    const auto start = chrono::high_resolution_clock::now();
-    while (start + chrono::milliseconds(STAGE_COMP_TIME) > chrono::high_resolution_clock::now());
-
-    d->timestamp = chrono::high_resolution_clock::now();
-    return data;
-}
 
 int main() {
     cout << "\nStart pipeline test" << endl;
-    Pipeline pipeline{fetch_data, {worker1, worker2, worker3}};
+    Pipeline pipeline{Fetcher{}, {worker, worker, worker}};
     for (int i{0}; i < 4; ++i) {
         my_data *d = static_cast<my_data*>(pipeline.get_future().get());
         cout << "Data " << i << " returned. Waited: "

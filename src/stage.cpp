@@ -33,14 +33,18 @@ GenericStage::~GenericStage() {
 }
 
 
-FirstStage::FirstStage(void* (*func)(), pipeline_link &link_out)
+FirstStage::FirstStage(function<void*()> func, pipeline_link &link_out)
 : GenericStage(link_out), func{func} {
     stage_index = 0;
     th = new thread(&FirstStage::run, this);
 }
 
-Stage::Stage(void* (*func)(void*), pipeline_link &link_in, pipeline_link &link_out, unsigned int stage_idx)
-: GenericStage(link_out), link_in{link_in}, func{func} {
+Stage::Stage(
+    function<void*(void*)> func,
+    pipeline_link &link_in,
+    pipeline_link &link_out,
+    unsigned int stage_idx
+): GenericStage(link_out), link_in{link_in}, func{func} {
     stage_index = stage_idx;
     th = new thread(&Stage::run, this);
 }
