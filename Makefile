@@ -13,12 +13,12 @@ CCFLAGS += -std=c++17 -MMD
 LDFLAGS += -lsfml-graphics -lsfml-audio -lsfml-window -lsfml-system
 
 # File which contains the main function
-MAINFILE := pipeline_test.cpp
+MAINFILE := test.cpp
 
 # Name of output
-OUTNAME := pipeline_test.out
+OUTNAME := test.out
 
-MAINOBJ := pipeline_test.o   #$(patsubst %.cpp, %.o, $(MAINFILE))
+MAINOBJ := test.o   #$(patsubst %.cpp, %.o, $(MAINFILE))
 SRCS := $(shell find $(SRC_DIR) -name '*.cpp' ! -name $(MAINFILE))
 OBJS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 ALL_OBJS := $(OBJS) $(TEST_OBJS) $(OBJ_DIR)/$(MAINOBJ)

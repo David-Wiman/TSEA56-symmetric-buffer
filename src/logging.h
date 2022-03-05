@@ -3,16 +3,8 @@
 
 #include <mutex>
 
-#include "globals.h"
+extern std::mutex global_print_mtx;
 
-std::mutex print_mtx;
-
-#define print_with_lock(fmt, args...)({lock_guard<mutex> guard(print_mtx); printf(fmt, ##args);})
-
-#ifdef LOG_WORKERS
-#   define log_worker(fmt, args...)(print_with_lock(fmt, ##args))
-#else
-#   define log_worker(fmt, args...)({})
-#endif
+#define print_with_lock(fmt, args...)({lock_guard<mutex> guard(global_print_mtx); printf(fmt, ##args);})
 
 #endif  // LOGGING_H
