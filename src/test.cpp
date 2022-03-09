@@ -4,6 +4,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <memory>
 
 #include "logging.h"
 #include "symmetric_buffer.h"
@@ -14,12 +15,12 @@ using namespace std;
 
 atomic<bool> running{true};
 
-// If internal memory is needed (in this case to count number of data produces)
-// the worker funktion must be a class which implements the
+// If internal memory is needed (in this case to count number of data produced)
+// the worker function must be a class which implements the
 // void operator(arg...)() method.
 class Producer {
 public:
-    Producer(SymmetricBuffer<string*> *buffer): buffer{buffer}, counter{0} {}
+    Producer(SymmetricBuffer<string> *buffer): buffer{buffer}, counter{0} {}
     void operator()(){
         print_with_lock("Start producer\n");
 
@@ -28,17 +29,17 @@ public:
             const auto start = chrono::high_resolution_clock::now();
             while (start + chrono::milliseconds(STAGE_COMP_TIME) > chrono::high_resolution_clock::now());
             print_with_lock("Producer done\n");
-
-            auto s = new string{"Foo" + to_string(counter++)};
+            string s{"Bar" + to_string(counter++)};
             buffer->store(s);
+            // which is a shorthand for buffer->store(make_unique<string>(s));
         }
     }
 private:
-    SymmetricBuffer<string*> *buffer;
+    SymmetricBuffer<string> *buffer;
     int counter;
 };
 
-void consumer(SymmetricBuffer<string*> *buffer) {
+void consumer(SymmetricBuffer<string> *buffer) {
     print_with_lock("Start consumer\n");
 
     while (running.load()) {
@@ -47,16 +48,15 @@ void consumer(SymmetricBuffer<string*> *buffer) {
         while (start + chrono::milliseconds(STAGE_COMP_TIME) > chrono::high_resolution_clock::now());
         print_with_lock("Consumer done\n");
 
-        auto s = buffer->extract();
-        cout << "Message was: " << *s << endl;
-        delete s;
+        auto msg = buffer->extract();
+        cout << "Message was: " << *msg << endl;
     }
 }
 
 int main() {
     cout << "\nStart pipeline test" << endl;
 
-    SymmetricBuffer<string*> buffer{};
+    SymmetricBuffer<string> buffer{};
     thread t1{Producer{&buffer}};
     thread t2{consumer, &buffer};
 
