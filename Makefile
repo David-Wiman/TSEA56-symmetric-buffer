@@ -25,8 +25,11 @@ ALL_OBJS := $(OBJS) $(TEST_OBJS) $(OBJ_DIR)/$(MAINOBJ)
 DEPS := $(patsubst %.o, %.d, $(ALL_OBJS))
 
 # Main objetice - created with 'make' or 'make main'.
-main: $(OBJ_DIR) $(OBJS) $(OBJ_DIR)/$(MAINOBJ) Makefile
+main: base $(OBJ_DIR)/$(MAINOBJ)
 	$(CCC) $(CCFLAGS) -o $(OUTNAME) $(OBJS) $(OBJ_DIR)/$(MAINOBJ) $(LDFLAGS)
+
+# Compile everything except mainfile
+base: $(OBJ_DIR) $(OBJS) Makefile
 
 # Main program objects
 $(OBJS) $(OBJ_DIR)/$(MAINOBJ): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
@@ -35,6 +38,7 @@ $(OBJS) $(OBJ_DIR)/$(MAINOBJ): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 $(OBJ_DIR):
 	@ mkdir -p $(OBJ_DIR)
 
+# Run output file (and compile it if needed)
 run: main
 	@ ./$(OUTNAME)
 
