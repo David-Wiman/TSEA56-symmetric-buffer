@@ -13,7 +13,8 @@
 
 using namespace std;
 
-atomic<bool> running{true};
+atomic<bool> run_producer{true};
+atomic<bool> run_consumer{true};
 
 // If internal memory is needed (in this case to count number of data produced)
 // the worker function must be a class which implements the
@@ -22,9 +23,9 @@ class Producer {
 public:
     Producer(SymmetricBuffer<string> *buffer): buffer{buffer}, counter{0} {}
     void operator()(){
-        print_with_lock("Start producer\n");
 
-        while (running.load()) {
+        while (run_producer.load()) {
+            print_with_lock("Start producer loop #%d\n", counter);
             // Do something
             const auto start = chrono::high_resolution_clock::now();
             while (start + chrono::milliseconds(STAGE_COMP_TIME) > chrono::high_resolution_clock::now());
@@ -33,39 +34,53 @@ public:
             buffer->store(s);
             // which is a shorthand for buffer->store(make_unique<string>(s));
         }
+        print_with_lock("Shutdown producer\n");
     }
 private:
     SymmetricBuffer<string> *buffer;
     int counter;
 };
 
-void consumer(SymmetricBuffer<string> *buffer) {
-    print_with_lock("Start consumer\n");
+void consumer(SymmetricBuffer<string> *buffer_in, SymmetricBuffer<string> *buffer_out) {
 
-    while (running.load()) {
+    while (run_producer.load() || buffer_in->has_data()) {
+        print_with_lock("Resart consumer\n");
+
+        // Extact data
+        auto msg = buffer_in->extract();
+
         // Do something
         const auto start = chrono::high_resolution_clock::now();
         while (start + chrono::milliseconds(STAGE_COMP_TIME) > chrono::high_resolution_clock::now());
-        print_with_lock("Consumer done\n");
 
-        auto msg = buffer->extract();
-        cout << "Message was: " << *msg << endl;
+        *msg = *msg + "_processed";
+
+        print_with_lock("Consumer done\n");
+        buffer_out->store(std::move(msg));
     }
+    print_with_lock("Shutdown consumer\n");
 }
 
 int main() {
     cout << "\nStart pipeline test" << endl;
 
-    SymmetricBuffer<string> buffer{};
-    thread t1{Producer{&buffer}};
-    thread t2{consumer, &buffer};
+    SymmetricBuffer<string> buffer0{};
+    SymmetricBuffer<string> buffer1{};
+    thread t1{Producer{&buffer0}};
+    thread t2{consumer, &buffer0, &buffer1};
 
-    this_thread::sleep_for(chrono::milliseconds(STAGE_COMP_TIME*5));
-    running.store(false);
+    for (int i{0}; i < 5; i++) {
+        auto data = buffer1.extract();
+        cout << "Recieved data: " << *data << endl;
+    }
 
+    // Shutdown
+    run_producer.store(false);
+    cout << "End of loop, processing remaining data" << endl;
+    auto data = buffer1.extract();
     t1.join();
+    cout << "Recieved data: " << *data << endl;
     t2.join();
-
 
     cout << "\nEnd pipeline test" << endl;
 }

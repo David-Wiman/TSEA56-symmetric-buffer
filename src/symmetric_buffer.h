@@ -30,7 +30,7 @@
 template <class T>
 class SymmetricBuffer {
 public:
-    SymmetricBuffer<T>(): mtx{}, cv{}, has_data{false}, buffer{} {}
+    SymmetricBuffer<T>(): mtx{}, cv{}, _has_data{false}, buffer{} {}
 
     SymmetricBuffer<T>(const SymmetricBuffer<T>&) = delete;
     SymmetricBuffer<T> operator=(const SymmetricBuffer) = delete;
@@ -42,10 +42,14 @@ public:
 
     std::unique_ptr<T> extract();
 
+    bool has_data() {
+        return _has_data;
+    }
+
 private:
     std::mutex mtx;
     std::condition_variable cv;
-    bool has_data;
+    bool _has_data;
     std::unique_ptr<T> buffer;
 };
 
@@ -58,7 +62,7 @@ void SymmetricBuffer<T>::store(std::unique_ptr<T> data) {
 
         // Write in buffer
         buffer = std::move(data);
-        has_data = true;
+        _has_data = true;
     }
 
     // Notify data written
@@ -67,7 +71,7 @@ void SymmetricBuffer<T>::store(std::unique_ptr<T> data) {
     // Wait for read
     {
         std::unique_lock<std::mutex> lk(mtx);
-        cv.wait(lk, [this]{return !has_data;});
+        cv.wait(lk, [this]{return !_has_data;});
     }
 }
 
@@ -79,11 +83,11 @@ std::unique_ptr<T> SymmetricBuffer<T>::extract() {
         std::unique_lock<std::mutex> lk(mtx);
 
         // Wait for data (unique_lock allows us to release the mutex while waiting)
-        cv.wait(lk, [this]{return has_data;});
+        cv.wait(lk, [this]{return _has_data;});
 
         // Read data
         data = std::move(buffer);
-        has_data = false;
+        _has_data = false;
     }
 
     // Notify data read
